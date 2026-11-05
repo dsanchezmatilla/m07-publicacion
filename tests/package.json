@@ -1,0 +1,12 @@
+{
+  "name": "whatsapp-seguro-tests",
+  "version": "1.0.0",
+  "description": "Scripts de validación del servidor de WhatsApp seguro",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test_servidor.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

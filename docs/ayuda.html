@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WhatsApp seguro - Ayuda</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <header>
+    <h1>Ayuda de WhatsApp seguro</h1>
+    <a href="index.html">Volver a la descarga</a>
+  </header>
+
+  <nav>
+    <a href="#instalacion">Instalación</a>
+    <a href="#uso">Uso</a>
+    <a href="#seguridad">Seguridad</a>
+    <a href="#servidor">Servidor</a>
+    <a href="#validacion">Scripts de validación</a>
+  </nav>
+
+  <h2 id="instalacion">1. Instalación</h2>
+  <h3>Android</h3>
+  <ol>
+    <li>Escanea el código QR de la <a href="index.html">página de descarga</a> o pulsa "Android (APK)".</li>
+    <li>Abre el fichero descargado. Si Android lo pide, permite "instalar aplicaciones de origen desconocido".</li>
+    <li>Abre la app <b>WhatsApp seguro</b>.</li>
+  </ol>
+  <h3>Linux</h3>
+  <pre>tar xzf whatsapp-seguro-linux.tar.gz
+cd bundle
+./whatsapp_seguro</pre>
+  <p>Para enviar imágenes en Linux hace falta <code>zenity</code> (<code>sudo apt install zenity</code>).</p>
+
+  <h2 id="uso">2. Uso</h2>
+  <ol>
+    <li><b>Entrar:</b> escribe tu nombre y la dirección del servidor (por ejemplo <code>ws://IP_PROXMOX:8080</code>) y pulsa <i>Entrar</i>.
+      La primera vez se generan tus claves automáticamente.</li>
+    <li><b>Contactos:</b> a la izquierda aparecen los usuarios. El círculo verde indica que está conectado.
+      Debajo del nombre se ve el último mensaje o "escribiendo..."; el número verde son los mensajes sin leer.</li>
+    <li><b>Enviar:</b> pulsa un contacto, escribe y pulsa ➤ o Intro. Con 📎 eliges una imagen (máx. 5 MB).</li>
+    <li><b>Estado de los mensajes:</b>
+      <table>
+        <tr><th>Icono</th><th>Significado</th></tr>
+        <tr><td>✓ gris</td><td>Enviado al servidor</td></tr>
+        <tr><td>✓✓ gris</td><td>Recibido por el otro usuario, pero sin leer</td></tr>
+        <tr><td>✓✓ azul</td><td>Leído (el otro ha abierto el chat)</td></tr>
+      </table>
+    </li>
+    <li><b>Historial:</b> las conversaciones se guardan en tu dispositivo y siguen ahí al volver a abrir la app con el mismo nombre.</li>
+  </ol>
+  <p>En Linux (pantalla ancha) la lista y el chat se ven a la vez, como WhatsApp Web. En Android el chat se abre en otra pantalla.</p>
+
+  <h2 id="seguridad">3. Seguridad: cifrado de extremo a extremo</h2>
+  <p>Cada usuario tiene un par de claves <b>X25519</b>:</p>
+  <ul>
+    <li><b>Clave privada:</b> se queda siempre en tu dispositivo. Nunca se envía.</li>
+    <li><b>Clave pública:</b> se envía al servidor, que la reparte a los demás usuarios.</li>
+  </ul>
+  <pre>
+ Ana                          Servidor                         Pepe
+ secreto = X25519(privada Ana, pública Pepe)
+ cifrado = AES-GCM(secreto, "Hola")
+   ── {to: pepe, nonce, cipher, mac} ──►  (no puede leerlo)
+                                      ── {from: ana, ...} ──►
+                         secreto = X25519(privada Pepe, pública Ana)
+                         "Hola"  = AES-GCM descifrar(secreto, cipher)</pre>
+  <p>Los dos obtienen el mismo secreto sin enviarlo nunca (intercambio Diffie-Hellman).
+    El servidor solo conoce las claves públicas, por eso no puede descifrar nada.
+    AES-GCM además añade un código <i>mac</i>: si alguien modifica el mensaje por el camino, el descifrado falla.</p>
+
+  <h2 id="servidor">4. Servidor</h2>
+  <p>Servidor Node.js con WebSockets (librería <code>ws</code>) desplegado en el Proxmox del instituto como servicio <code>systemd</code>.
+    Solo hace tres cosas: guardar la clave pública de cada usuario, reenviar mensajes al destinatario
+    y guardar en memoria los mensajes de usuarios desconectados hasta que se conectan.</p>
+  <table>
+    <tr><th>type</th><th>Campos</th><th>Uso</th></tr>
+    <tr><td>login</td><td>user, publicKey</td><td>Registrarse</td></tr>
+    <tr><td>users</td><td>users[]</td><td>Lista de usuarios (servidor → clientes)</td></tr>
+    <tr><td>msg</td><td>to, id, kind, nonce, cipher, mac</td><td>Mensaje cifrado</td></tr>
+    <tr><td>delivered</td><td>to, id</td><td>Mensaje recibido</td></tr>
+    <tr><td>read</td><td>to, id</td><td>Mensaje leído</td></tr>
+    <tr><td>typing</td><td>to</td><td>Está escribiendo</td></tr>
+  </table>
+
+  <h2 id="validacion">5. Scripts de validación</h2>
+  <p>Comprueban automáticamente que el servidor del Proxmox funciona. Necesitan Node.js 18 o superior.</p>
+  <pre>git clone https://github.com/USUARIO/m07-publicacion
+cd m07-publicacion/tests
+./run-tests.sh ws://IP_PROXMOX:8080</pre>
+  <p>Cada prueba crea usuarios de prueba que se conectan al servidor:</p>
+  <table>
+    <tr><th>Prueba</th><th>Qué comprueba</th></tr>
+    <tr><td>1</td><td>El servidor acepta conexiones WebSocket</td></tr>
+    <tr><td>2</td><td>Tras el login llega la lista de usuarios con la clave pública y online = true</td></tr>
+    <tr><td>3</td><td>Un mensaje cifrado llega al destinatario sin modificar (nonce, cipher y mac idénticos)</td></tr>
+    <tr><td>4</td><td>No se puede falsificar el remitente: el servidor pone el <code>from</code> real</td></tr>
+    <tr><td>5</td><td>Se reenvía el aviso "escribiendo"</td></tr>
+    <tr><td>6</td><td>Se reenvían las confirmaciones de recibido y leído</td></tr>
+    <tr><td>7</td><td>Un mensaje a un usuario desconectado le llega cuando se conecta</td></tr>
+    <tr><td>8</td><td>Al desconectarse un usuario, los demás lo ven como offline</td></tr>
+  </table>
+  <p>Al final se muestra un resumen: <code># pass 8</code> y <code># fail 0</code> indica que todo funciona.</p>
+</body>
+</html>
