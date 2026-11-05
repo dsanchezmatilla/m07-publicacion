@@ -35,7 +35,7 @@ cd bundle
 
   <h2 id="uso">2. Uso</h2>
   <ol>
-    <li><b>Entrar:</b> escribe tu nombre y la dirección del servidor (por ejemplo <code>ws://IP_PROXMOX:8080</code>) y pulsa <i>Entrar</i>.
+    <li><b>Entrar:</b> escribe tu nombre y la dirección del servidor (por ejemplo <code>wss://dsanchezmatilla.ieti.site</code>) y pulsa <i>Entrar</i>.
       La primera vez se generan tus claves automáticamente.</li>
     <li><b>Contactos:</b> a la izquierda aparecen los usuarios. El círculo verde indica que está conectado.
       Debajo del nombre se ve el último mensaje o "escribiendo..."; el número verde son los mensajes sin leer.</li>
@@ -86,9 +86,9 @@ cd bundle
 
   <h2 id="validacion">5. Scripts de validación</h2>
   <p>Comprueban automáticamente que el servidor del Proxmox funciona. Necesitan Node.js 18 o superior.</p>
-  <pre>git clone https://github.com/USUARIO/m07-publicacion
+  <pre>git clone https://github.com/dsanchezmatilla/m07-publicacion
 cd m07-publicacion/tests
-./run-tests.sh ws://IP_PROXMOX:8080</pre>
+./run-tests.sh wss://dsanchezmatilla.ieti.site</pre>
   <p>Cada prueba crea usuarios de prueba que se conectan al servidor:</p>
   <table>
     <tr><th>Prueba</th><th>Qué comprueba</th></tr>
